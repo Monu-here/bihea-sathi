@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\ConnectionRequestController;
 use App\Http\Controllers\Api\V1\LoginController;
+use App\Http\Controllers\Api\V1\PostController;
 use App\Http\Controllers\Api\V1\ProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -14,7 +15,6 @@ use Illuminate\Support\Facades\Route;
 | API Version 1 routes are grouped under /api/v1
 |
 */
-
 
 Route::prefix('v1')->group(function () {
     Route::post('/signup', [ProfileController::class, 'signup'])->name('signup');
@@ -33,5 +33,22 @@ Route::prefix('v1')->group(function () {
         Route::get('get-connection-requests', [ConnectionRequestController::class, 'getConnectionRequests'])->name('connection-requests');
         Route::post('respond-connection-request', [ConnectionRequestController::class, 'respondConnectionRequest'])->name('respond-connection-request');
         Route::post('show-other-user-profile-details/{id}', [ConnectionRequestController::class, 'showOtherUserProfileDetails'])->name('show-other-user-profile-details');
+        Route::get('get-my-connections', [ConnectionRequestController::class, 'getMyConnections'])->name('my-connections');
+
+        // Post/Media routes
+        Route::post('posts', [PostController::class, 'createPost'])->name('posts.create');
+        Route::get('posts/connections', [PostController::class, 'getConnectionsPosts'])->name('posts.connections');
+        Route::get('posts/my', [PostController::class, 'getMyPosts'])->name('posts.my');
+        Route::get('posts/{id}', [PostController::class, 'getPost'])->name('posts.show');
+        Route::delete('posts/{id}', [PostController::class, 'deletePost'])->name('posts.delete');
+
+        // Like routes
+        Route::post('posts/{id}/like', [PostController::class, 'toggleLike'])->name('posts.like');
+        Route::get('posts/{id}/likes', [PostController::class, 'getLikes'])->name('posts.likes');
+
+        // Comment routes
+        Route::post('posts/{id}/comments', [PostController::class, 'addComment'])->name('posts.comments.add');
+        Route::get('posts/{id}/comments', [PostController::class, 'getComments'])->name('posts.comments.list');
+        Route::delete('posts/{postId}/comments/{commentId}', [PostController::class, 'deleteComment'])->name('posts.comments.delete');
     });
 });

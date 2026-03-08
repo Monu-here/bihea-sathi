@@ -2,19 +2,18 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Mail\WelcomeMail;
 use App\Mail\EmailVerificationMail;
+use App\Mail\WelcomeMail;
 use App\Models\ProfileModel;
 use App\Models\User;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Validator;
 
 class ProfileController extends Controller
 {
-
     public function signup(Request $request)
     {
 
@@ -100,7 +99,7 @@ class ProfileController extends Controller
                 'current_step' => 1,
                 'is_complete' => $request->is_complete ?? false,
                 'is_verified' => $request->is_verified ?? false,
-                'verification_pin' => $verificationPin
+                'verification_pin' => $verificationPin,
 
             ]);
             Log::info('User registered successfully', ['user_id' => $user->id, 'email' => $user->email]);
@@ -109,6 +108,7 @@ class ProfileController extends Controller
 
             Mail::to($user->email)->send(new EmailVerificationMail($user->name, $verificationPin));
             DB::commit();
+
             return response()->json([
                 'success' => true,
                 'message' => 'Registration successful',
@@ -119,6 +119,7 @@ class ProfileController extends Controller
             ], 201);
         } catch (\Exception $e) {
             DB::rollback();
+
             return response()->json([
                 'success' => false,
                 'message' => 'Registration failed',
@@ -126,6 +127,7 @@ class ProfileController extends Controller
             ], 500);
         }
     }
+
     public function verifyEmail(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -141,7 +143,7 @@ class ProfileController extends Controller
         $profile = ProfileModel::whereHas('user', function ($query) use ($request) {
             $query->where('email', $request->email);
         })->first();
-        if (!$profile) {
+        if (! $profile) {
             return response()->json([
                 'success' => false,
                 'message' => 'Profile not found for the provided email',
@@ -157,6 +159,7 @@ class ProfileController extends Controller
         $profile->is_verified = true;
         $profile->verification_pin = null;
         $profile->save();
+
         return response()->json([
             'success' => true,
             'message' => 'Email verified successfully',
@@ -172,7 +175,7 @@ class ProfileController extends Controller
             $query->where('email', $request->email);
         })->first();
 
-        if (!$profile) {
+        if (! $profile) {
             return response()->json(['success' => false, 'message' => 'Profile not found'], 404);
         }
 
@@ -183,18 +186,20 @@ class ProfileController extends Controller
 
         // Send verification email...
         Mail::to($profile->user->email)->send(new EmailVerificationMail($profile->user->name, $pin));
+
         return response()->json(['success' => true, 'message' => 'Verification code sent']);
     }
 
     public function myProfile(Request $request)
     {
         $profile = ProfileModel::where('user_id', $request->user()->id)->first();
-        if (!$profile) {
+        if (! $profile) {
             return response()->json([
                 'success' => false,
                 'message' => 'Profile not found',
             ], 404);
         }
+
         return response()->json([
             'success' => true,
             'message' => 'Profile retrieved successfully',
@@ -203,10 +208,12 @@ class ProfileController extends Controller
             ],
         ]);
     }
+
     public function updateProfile(Request $request)
     {
         $profile = ProfileModel::where('user_id', $request->user()->id)->first();
-        if (!$profile) {
+        $user = User::find($request->user()->id);
+        if (! $profile) {
             return response()->json([
                 'success' => false,
                 'message' => 'Profile not found',
@@ -249,21 +256,23 @@ class ProfileController extends Controller
                 'errors' => $validator->errors(),
             ], 422);
         }
-        $imageFilePath  = '';
+        $imageFilePath = '';
         if ($request->hasFile('main_photo')) {
             $image = $request->file('main_photo');
-            $imageFilePath = 'profiles/' . uniqid() . '_' . time() . '.' . $image->getClientOriginalExtension();
+            $imageFilePath = 'profiles/'.uniqid().'_'.time().'.'.$image->getClientOriginalExtension();
             $image->storeAs('public', $imageFilePath);
         }
         $additionalPhotoPaths = [];
         if ($request->hasFile('additional_photos')) {
             foreach ($request->file('additional_photos') as $photo) {
-                $path = 'profiles/' . uniqid() . '_' . time() . '.' . $photo->getClientOriginalExtension();
+                $path = 'profiles/'.uniqid().'_'.time().'.'.$photo->getClientOriginalExtension();
                 $photo->storeAs('public', $path);
                 $additionalPhotoPaths[] = $path;
             }
         }
-
+        $user->update([
+            'name' => $request->full_name ?? $user->name,
+        ]);
         $profile->update([
             'profile_for' => $request->profile_for ?? $profile->profile_for,
             'full_name' => $request->full_name ?? $profile->full_name,
@@ -291,6 +300,7 @@ class ProfileController extends Controller
             'additional_photos' => $additionalPhotoPaths ? json_encode($additionalPhotoPaths) : $profile->additional_photos,
             'is_complete' => $request->is_complete ?? $profile->is_complete,
         ]);
+
         return response()->json([
             'success' => true,
             'message' => 'Profile updated successfully',
@@ -299,6 +309,7 @@ class ProfileController extends Controller
             ],
         ]);
     }
+
     public function findYourLifePartner(Request $request)
     {
         $id = $request->user()->id;
@@ -309,8 +320,8 @@ class ProfileController extends Controller
         $ageMax = null;
         if (is_string($age)) {
             if (preg_match('/^(\\d+) to (\\d+)$/', $age, $matches)) {
-                $ageMin = (int)$matches[1];
-                $ageMax = (int)$matches[2];
+                $ageMin = (int) $matches[1];
+                $ageMax = (int) $matches[2];
             } elseif ($age === '40+') {
                 $ageMin = 40;
                 $ageMax = 100;
@@ -335,16 +346,15 @@ class ProfileController extends Controller
             })
             ->where(function ($q) use ($religion, $location) {
                 if ($religion) {
-                    $q->where('partner_religion', 'like', '%' . trim((string) $religion) . '%');
+                    $q->where('partner_religion', 'like', '%'.trim((string) $religion).'%');
                 }
                 if ($location) {
                     $parts = array_filter(array_map('trim', explode(',', (string) $location)));
                     foreach ($parts as $part) {
-                        $q->orWhere('partner_locations', 'like', '%' . $part . '%');
+                        $q->orWhere('partner_locations', 'like', '%'.$part.'%');
                     }
                 }
             });
-
 
         // Age: date_of_birth between now()->subYears($ageMax) and now()->subYears($ageMin)
         if ($ageMin !== null && $ageMax !== null) {
@@ -379,15 +389,15 @@ class ProfileController extends Controller
             }
         }
 
-        if (!empty($tokens)) {
+        if (! empty($tokens)) {
             $query->where(function ($q) use ($tokens) {
                 foreach ($tokens as $i => $t) {
                     $col = $t['col'];
                     $val = $t['val'];
                     if ($i === 0) {
-                        $q->where($col, 'like', '%' . $val . '%');
+                        $q->where($col, 'like', '%'.$val.'%');
                     } else {
-                        $q->orWhere($col, 'like', '%' . $val . '%');
+                        $q->orWhere($col, 'like', '%'.$val.'%');
                     }
                 }
             });
@@ -395,13 +405,14 @@ class ProfileController extends Controller
 
         // Log SQL for debugging
         try {
-            Log::debug('SQL: ' . $query->toSql(), ['bindings' => $query->getBindings()]);
+            Log::debug('SQL: '.$query->toSql(), ['bindings' => $query->getBindings()]);
         } catch (\Exception $e) {
             Log::debug('Could not get SQL from query builder', ['error' => $e->getMessage()]);
         }
 
         $match = $query->orderBy('created_at', 'desc')->get();
         LOG::info('Matches found', ['count' => $match->count()]);
+
         return response()->json([
             'success' => true,
             'message' => 'Matches found successfully',
@@ -410,10 +421,30 @@ class ProfileController extends Controller
             ],
         ]);
     }
+
     public function getAllProfiles(Request $request)
     {
         $id = $request->user()->id;
-        $profiles = DB::table('profile_models')->where('user_id', '!=', $id)->where('is_verified', true)->where('is_complete', true)->orderBy('created_at', 'desc')->get();
+
+        // Get user IDs with accepted connections (both directions)
+        $acceptedConnectionIds = DB::table('connection_models')
+            ->where('status', 'accepted')
+            ->where(function ($q) use ($id) {
+                $q->where('from_user_id', $id)
+                    ->orWhere('to_user_id', $id);
+            })
+            ->select(DB::raw("CASE WHEN from_user_id = {$id} THEN to_user_id ELSE from_user_id END as connected_user_id"))
+            ->pluck('connected_user_id');
+
+        $profiles = DB::table('profile_models as p')
+            ->where('p.user_id', '!=', $id)
+            ->whereNotIn('p.user_id', $acceptedConnectionIds)
+            ->where('p.is_verified', true)
+            ->where('p.is_complete', true)
+            ->orderBy('p.created_at', 'desc')
+            ->get();
+        Log::info('All profiles retrieved', ['count' => $profiles->count()]);
+
         return response()->json([
             'success' => true,
             'message' => 'Profiles retrieved successfully',
@@ -422,5 +453,4 @@ class ProfileController extends Controller
             ],
         ]);
     }
-    
 }

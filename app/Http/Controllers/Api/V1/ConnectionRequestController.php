@@ -51,11 +51,13 @@ class ConnectionRequestController extends Controller
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+
         return response()->json([
             'success' => true,
             'message' => 'Connection request sent successfully',
         ]);
     }
+
     public function getConnectionRequests(Request $request)
     {
         $userId = $request->user()->id;
@@ -65,12 +67,14 @@ class ConnectionRequestController extends Controller
             ->join('users', 'connection_models.from_user_id', '=', 'users.id')
             ->select('connection_models.id as request_id', 'users.id as from_user_id', 'users.name as from_user_name', 'users.email as from_user_email', 'connection_models.created_at')
             ->get();
-            Log::info('Connection Requests for User ID: ' . $userId, ['requests' => $connectionRequests]);
+        Log::info('Connection Requests for User ID: '.$userId, ['requests' => $connectionRequests]);
+
         return response()->json([
             'success' => true,
             'data' => $connectionRequests,
         ]);
     }
+
     public function respondConnectionRequest(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -91,7 +95,7 @@ class ConnectionRequestController extends Controller
             ->where('from_user_id', $fromUserId)
             ->where('to_user_id', $toUserId)
             ->first();
-        if (!$connectionRequest) {
+        if (! $connectionRequest) {
             return response()->json([
                 'success' => false,
                 'message' => 'Connection request not found',
@@ -106,24 +110,49 @@ class ConnectionRequestController extends Controller
         DB::table('connection_models')
             ->where('id', $connectionRequest->id)
             ->update(['status' => $action == 'accept' ? 'accepted' : 'rejected', 'updated_at' => now()]);
+
         return response()->json([
             'success' => true,
             'message' => "Connection request has been {$action}ed successfully",
         ]);
     }
+
     public function showOtherUserProfileDetails(Request $request, $id)
     {
-
-
-
         $profileDetails = DB::table('profile_models')
             ->where('user_id', $id)
             ->join('users', 'profile_models.user_id', '=', 'users.id')
             ->select('users.id as user_id', 'users.name', 'users.email', 'profile_models.*')
             ->first();
+
         return response()->json([
             'success' => true,
             'data' => $profileDetails,
+        ]);
+    }
+
+    public function getMyConnections(Request $request)
+    {
+        $userId = $request->user()->id;
+        $connections = DB::table('connection_models')
+            ->where(function ($q) use ($userId) {
+                $q->where('from_user_id', $userId)->where('status', 'accepted');
+            })
+            ->orWhere(function ($q) use ($userId) {
+                $q->where('to_user_id', $userId)->where('status', 'accepted');
+            })
+            ->join('users', function ($join) {
+                $join->on('connection_models.from_user_id', '=', 'users.id')
+                    ->orOn('connection_models.to_user_id', '=', 'users.id');
+            })
+            ->join('profile_models', 'users.id', '=', 'profile_models.user_id')
+            ->select('users.id as user_id', 'users.name', 'users.email', 'profile_models*')
+            ->distinct()
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $connections,
         ]);
     }
 }
