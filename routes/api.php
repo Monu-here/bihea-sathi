@@ -35,18 +35,15 @@ Route::prefix('v1')->group(function () {
         Route::post('show-other-user-profile-details/{id}', [ConnectionRequestController::class, 'showOtherUserProfileDetails'])->name('show-other-user-profile-details');
         Route::get('get-my-connections', [ConnectionRequestController::class, 'getMyConnections'])->name('my-connections');
 
-        // Post/Media routes
         Route::post('posts', [PostController::class, 'createPost'])->name('posts.create');
         Route::get('posts/connections', [PostController::class, 'getConnectionsPosts'])->name('posts.connections');
         Route::get('posts/my', [PostController::class, 'getMyPosts'])->name('posts.my');
         Route::get('posts/{id}', [PostController::class, 'getPost'])->name('posts.show');
         Route::delete('posts/{id}', [PostController::class, 'deletePost'])->name('posts.delete');
 
-        // Like routes
         Route::post('posts/{id}/like', [PostController::class, 'toggleLike'])->name('posts.like');
         Route::get('posts/{id}/likes', [PostController::class, 'getLikes'])->name('posts.likes');
 
-        // Comment routes
         Route::post('posts/{id}/comments', [PostController::class, 'addComment'])->name('posts.comments.add');
         Route::get('posts/{id}/comments', [PostController::class, 'getComments'])->name('posts.comments.list');
         Route::delete('posts/{postId}/comments/{commentId}', [PostController::class, 'deleteComment'])->name('posts.comments.delete');

@@ -146,7 +146,7 @@ class ConnectionRequestController extends Controller
                     ->orOn('connection_models.to_user_id', '=', 'users.id');
             })
             ->join('profile_models', 'users.id', '=', 'profile_models.user_id')
-            ->select('users.id as user_id', 'users.name', 'users.email', 'profile_models*')
+            ->select('users.id as user_id', 'users.name', 'users.email', 'profile_models.*')
             ->distinct()
             ->get();
 
