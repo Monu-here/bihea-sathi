@@ -67,7 +67,7 @@ class ConnectionRequestController extends Controller
             ->join('users', 'connection_models.from_user_id', '=', 'users.id')
             ->select('connection_models.id as request_id', 'users.id as from_user_id', 'users.name as from_user_name', 'users.email as from_user_email', 'connection_models.created_at')
             ->get();
-        Log::info('Connection Requests for User ID: '.$userId, ['requests' => $connectionRequests]);
+        Log::info('Connection Requests for User ID: ' . $userId, ['requests' => $connectionRequests]);
 
         return response()->json([
             'success' => true,
@@ -131,28 +131,29 @@ class ConnectionRequestController extends Controller
         ]);
     }
 
+
     public function getMyConnections(Request $request)
     {
         $userId = $request->user()->id;
+
         $connections = DB::table('connection_models')
+            ->where('status', 'accepted')
             ->where(function ($q) use ($userId) {
-                $q->where('from_user_id', $userId)->where('status', 'accepted');
+                $q->where('from_user_id', $userId)
+                    ->orWhere('to_user_id', $userId);
             })
-            ->orWhere(function ($q) use ($userId) {
-                $q->where('to_user_id', $userId)->where('status', 'accepted');
-            })
-            ->join('users', function ($join) {
-                $join->on('connection_models.from_user_id', '=', 'users.id')
-                    ->orOn('connection_models.to_user_id', '=', 'users.id');
-            })
+            ->select(DB::raw("CASE WHEN from_user_id = {$userId} THEN to_user_id ELSE from_user_id END as connected_user_id"))
+            ->distinct();
+
+        $result = DB::table('users')
+            ->joinSub($connections, 'conn', 'users.id', '=', 'conn.connected_user_id')
             ->join('profile_models', 'users.id', '=', 'profile_models.user_id')
             ->select('users.id as user_id', 'users.name', 'users.email', 'profile_models.*')
-            ->distinct()
             ->get();
 
         return response()->json([
             'success' => true,
-            'data' => $connections,
+            'data' => $result,
         ]);
     }
 }
