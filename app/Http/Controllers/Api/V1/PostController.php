@@ -79,6 +79,7 @@ class PostController extends Controller
             ->whereIn('user_id', $acceptedConnectionIds)
             ->with(['user:id,name,email'])
             ->with(['userProfile:id,user_id,main_photo'])
+            ->withCount(['likes', 'comments']) 
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -98,7 +99,8 @@ class PostController extends Controller
 
         $posts = PostModel::query()
             ->where('user_id', $userId)
-            ->with(['userProfile:id,user_id,main_photo'])
+            ->with(['user:id,name,email', 'userProfile:id,user_id,main_photo'])
+            ->withCount(['likes', 'comments'])   
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -376,7 +378,7 @@ class PostController extends Controller
         ]);
     }
 
-   
+
     public function getLikes(Request $request, int $id): JsonResponse
     {
         $userId = $request->user()->id;
